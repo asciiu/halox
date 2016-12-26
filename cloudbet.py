@@ -2,6 +2,8 @@ import requests
 import re
 import mechanize
 import unittest
+import json
+import urllib2
 
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
@@ -13,6 +15,7 @@ class Cloudbet(unittest.TestCase):
         # link to NFL football events
         url = 'https://www.cloudbet.com/en/sports/competition/208'
         # link to NBA basketball events
+        self.sport = "NBA Basketball"
         url = 'https://www.cloudbet.com/en/sports/competition/143'
 
         self.driver = webdriver.PhantomJS()
@@ -29,6 +32,7 @@ class Cloudbet(unittest.TestCase):
 
         formatter = '%a, %b %d, %Y %I:%M %p'
         date = ""
+        allEvents = []
         for row in table.findAll("tr"):
             # if row is header row
             thead = row.find_parent("thead")
@@ -52,29 +56,55 @@ class Cloudbet(unittest.TestCase):
             names = map(lambda x: x.string, teamNames)
             #date = datetime.strftime(formatter)
             #print date
-            print timeStr
-            print names
 
             href = description.a.get("href")
             gamePath = "(//a[contains(@href, '"+href+"')])"
             gameElement = driver.find_element_by_xpath(gamePath)
             gameElement.click()
 
-            linePath = "//*[text() = 'Points Spreads']"
-            spreads = WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(linePath))
+            sections = ["Moneyline", "Points Spreads", "Total Spreads"]
+            eventOptions = []
+            for section in sections:
+                linePath = "//*[text() = '"+section+"']"
+                spreads = WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(linePath))
 
-            spreads.click()
-            page2 = BeautifulSoup(driver.page_source, "html.parser")
-            pointSpreads = page2.find(string = "Points Spreads").parent.parent
-            options = pointSpreads.find_all("div", {"class":"name"})
-            for option in options:
-                optionName = option.string
-                odds = option.next_sibling.get_text()
-                print optionName + " " + odds
+                spreads.click()
+                page2 = BeautifulSoup(driver.page_source, "html.parser")
+                pointSpreads = page2.find(string = section).parent.parent
+                options = pointSpreads.find_all("div", {"class":"name"})
+
+                for option in options:
+                    optionName = option.string + " ML" if (section == "Moneyline") else option.string
+                    odds = option.next_sibling.get_text()
+                    sportsEventOption = {
+                        "name": optionName,
+                        "odds": float(odds)
+                        }
+                    eventOptions.append(sportsEventOption)
+
+            sportsEvent = {
+                "name": names[0] + " vs " + names[1],
+                "time": timeStr,
+                "options": eventOptions
+            }
+            allEvents.append(sportsEvent)
 
             driver.back()
             WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(gamePath))
             # follow event link
+
+        blob = {
+          "bookname": "Cloudbet",
+          "sport": self.sport,
+          "events": allEvents
+        }
+
+        #req = urllib2.Request('http://localhost:9000/events')
+        response = requests.post('http://localhost:9000/events', json=blob)
+
+        #req.add_header('Content-Type', 'application/json')
+        #response = urllib2.urlopen(req, blob)
+        print response.content
 
     def tearDown(self):
         self.driver.quit()
