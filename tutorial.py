@@ -1,16 +1,37 @@
-#import the library used to query a website
-from BeautifulSoup import BeautifulSoup
-import urllib2
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
 
-#specify the url
-wiki = "https://en.wikipedia.org/wiki/List_of_state_and_union_territory_capitals_in_India"
+import unittest
 
-#Query the website and return the html to the variable 'page'
-page = urllib2.urlopen(wiki)
+class LoginTest(unittest.TestCase):
 
-#import the Beautiful soup functions to parse the data returned from the website
+    def setUp(self):
+        self.driver = webdriver.PhantomJS()
+        self.driver.get("https://www.facebook.com")
 
-#Parse the html in the 'page' variable, and store it in Beautiful Soup format
-soup = BeautifulSoup(page)
+    def test_login(self):
+        driver = self.driver
+        facebookusername = "Luke"
+        password = "123456"
+        emailFieldId = "email"
+        passFieldId = "pass"
+        loginBtnXPath = "//input[@value='Log In']"
+        signupXPath = "(//a[contains(@href, '/r.php?locale=en_SP')])"
 
-print soup.prettify()
+        emailFieldElement = WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_id(emailFieldId))
+        passFieldElement = WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_id(passFieldId))
+        loginFieldElement = WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(loginBtnXPath))
+
+        emailFieldElement.clear()
+        emailFieldElement.send_keys(facebookusername)
+        passFieldElement.clear()
+        passFieldElement.send_keys(password)
+        loginFieldElement.click()
+
+        signUpFieldElement = WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(signupXPath))
+
+    def tearDown(self):
+        self.driver.quit()
+
+if __name__ == "__main__":
+    unittest.main()
