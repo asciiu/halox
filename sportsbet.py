@@ -61,6 +61,7 @@ class SportsBet(unittest.TestCase):
             if (date == "Matches"):
                 continue
 
+            # look for an event date
             datePath = "//*[text() = '"+date+"']"
             dateObj = driver.find_element_by_xpath(datePath)
             dateObj.click()
@@ -88,14 +89,23 @@ class SportsBet(unittest.TestCase):
                     t = ' '.join(t.split())
                     t = datetime.strptime(t, formatter3)
                     name = description.find("b").string
+                    timeStr =  t.strftime(formatter4)
+                    matchName = name.lower().title().replace(" V ", " vs ")
+                    print timeStr
+                    print matchName
 
+                    # click on the description to go to the spreads page
                     detailPath = "//*[text() = '"+name+"']"
-                    detailElement = driver.find_element_by_xpath(detailPath)
+                    detailElement = WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_xpath(detailPath))
                     detailElement.click()
 
                     linePath = "//*[text() = 'Points Spreads']"
-                    spreads = WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(linePath))
-                    time.sleep(2)
+                    try:
+                        spreads = driver.find_element_by_xpath(linePath)
+                    except NoSuchElementException:
+                        driver.back()
+                        WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(datePath2))
+                        continue
 
                     # extract spreads here
                     page3 = BeautifulSoup(driver.page_source, "html.parser")
@@ -104,7 +114,11 @@ class SportsBet(unittest.TestCase):
                     eventOptions = []
                     for section in sections:
 
-                        optionDiv = page3.find(string = section).parent.parent.parent
+                        sectionHeaderDiv = page3.find(string = section)
+                        if (sectionHeaderDiv == None):
+                            continue
+
+                        optionDiv = sectionHeaderDiv.parent.parent.parent
                         options = optionDiv.find_all("div", {"class":"cell"}) if (section != "Points Spreads") else optionDiv.find_all("a", {"class":"cell"})
 
                         for option in options:
@@ -117,6 +131,7 @@ class SportsBet(unittest.TestCase):
                                 "name": optionName,
                                 "odds": float(odds.string)
                             }
+                            print sportsEventOption
                             eventOptions.append(sportsEventOption)
 
                     timeStr =  t.strftime(formatter4)

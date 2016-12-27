@@ -4,11 +4,15 @@ import mechanize
 import unittest
 import json
 import urllib2
+import time
+
 
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import NoSuchElementException
+
 
 class Cloudbet(unittest.TestCase):
     def setUp(self):
@@ -21,12 +25,15 @@ class Cloudbet(unittest.TestCase):
         self.driver = webdriver.PhantomJS()
         self.driver.set_window_size(1120, 550)
         self.driver.get(url)
+        self.driver.implicitly_wait(10)
 
     def test_main(self):
         driver = self.driver
         soup = BeautifulSoup(driver.page_source, "html.parser")
 
+        # table with class sports-line
         table = soup.find("table", { "class" : "sports-line" })
+        # skip the live events table
         if "sports-line_live" in table["class"]:
             table = table.next_sibling
 
@@ -35,40 +42,57 @@ class Cloudbet(unittest.TestCase):
         allEvents = []
         for row in table.findAll("tr"):
             # if row is header row
+            # get the date string
             thead = row.find_parent("thead")
             if (thead != None):
                 div = row.find('div', {'class':'sports-line-title'})
                 date = div.span.string
                 continue
 
+            # find the div with class time
             timeDiv = row.find("div", {"class":"time"})
-            time = timeDiv.span.string
-            fullDate = date + " " + time
+            t = timeDiv.span.string
+            # construct date plus time
+            fullDate = date + " " + t
 
-            time = datetime.strptime(fullDate, formatter)
+            t = datetime.strptime(fullDate, formatter)
             # convert to mountain time?
             #time = time - timedelta(hours=7)
-            timeStr = time.strftime(formatter)
+            timeStr = t.strftime(formatter)
 
             # extract the team names
             description = row.find("td", {"class":"col2"})
             teamNames = row.findAll("div", {"class":"team-name-item"})
             names = map(lambda x: x.string, teamNames)
-            #date = datetime.strftime(formatter)
-            #print date
+            # log the date and names
+            print timeStr
+            print names
 
+            # execute a click to view the event details
             href = description.a.get("href")
             gamePath = "(//a[contains(@href, '"+href+"')])"
             gameElement = driver.find_element_by_xpath(gamePath)
             gameElement.click()
 
+            # must wait until moneyline section appears
+            sectionPath = "//*[text() = 'Moneyline']"
+            WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(sectionPath))
+            spreadsPage = BeautifulSoup(driver.page_source, "html.parser")
+
+            # these are the sections we extract odds from
             sections = ["Moneyline", "Points Spreads", "Total Spreads"]
             eventOptions = []
             for section in sections:
-                linePath = "//*[text() = '"+section+"']"
-                spreads = WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(linePath))
+                # skip locked sections
+                sectionDiv = spreadsPage.find(string = section).parent.parent
+                if ("locked" in sectionDiv.get("class")):
+                    continue
 
+                # find the section of interest and expand the options
+                linePath = "//*[text() = '"+section+"']"
+                spreads = driver.find_element_by_xpath(linePath)
                 spreads.click()
+
                 page2 = BeautifulSoup(driver.page_source, "html.parser")
                 pointSpreads = page2.find(string = section).parent.parent
                 options = pointSpreads.find_all("div", {"class":"name"})
@@ -80,6 +104,8 @@ class Cloudbet(unittest.TestCase):
                         "name": optionName,
                         "odds": float(odds)
                         }
+                    # log extracted content
+                    print sportsEventOption
                     eventOptions.append(sportsEventOption)
 
             sportsEvent = {
@@ -90,7 +116,7 @@ class Cloudbet(unittest.TestCase):
             allEvents.append(sportsEvent)
 
             driver.back()
-            WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(gamePath))
+            WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_class_name("sports-line-title"))
             # follow event link
 
         blob = {
