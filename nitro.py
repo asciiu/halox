@@ -1,7 +1,128 @@
-import re
-import mechanize
+import requests
+import unittest
+import json
+import urllib2
+import time
 
-br = mechanize.Browser()
-br.set_handle_robots(False)
-br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
-br.open("https://nitrogensports.eu")
+from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import NoSuchElementException
+
+
+class Nitro(unittest.TestCase):
+    def setUp(self):
+        # link to NBA basketball events
+        self.sport = "NBA Basketball"
+        url = 'https://nitrogensports.eu/sport/football/nfl'
+        url = 'https://nitrogensports.eu/sport/basketball/nba'
+
+        self.driver = webdriver.PhantomJS()
+        self.driver.set_window_size(2560, 1600)
+        self.driver.implicitly_wait(10)
+        self.driver.get(url)
+
+    def check_exists_by_class(self, classname):
+        try:
+            self.driver.find_element_by_class_name(classname)
+        except NoSuchElementException:
+            return False
+        return True
+
+    def check_exists_by_xpath(self, path):
+        try:
+            self.driver.find_element_by_xpath(path)
+        except NoSuchElementException:
+            return False
+        return True
+
+    def snap_shot(self):
+        self.driver.get_screenshot_as_file('/Users/bishop/Workspace/Python/scrapers/screenshots/test.png')
+
+    def format_date(self, txt):
+        timeText = txt.strip()
+        # convert full day to abrev
+        day = timeText.split(",")[0];
+        timeText = timeText.replace(day, day[:3])
+        # convert month to 3 letter formatted
+        month = timeText.split(" ")[1];
+        timeText = timeText.replace(month, month[:3])
+        timeText = timeText.replace("pm", " PM")
+        timeText = timeText.replace("am", " AM")
+        return timeText
+
+    def test_main(self):
+        driver = self.driver
+
+        # wait up to 10 seconds for signin btn to appear
+        signInBtn = WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_id("modal-welcome-new-button"))
+        # dead wait for modal to slide into view
+        time.sleep(2)
+        # create anonymous new account
+        signInBtn.click()
+
+        # wait until event search shows up
+        WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_class_name("events-result-set"))
+        time.sleep(2)
+
+        self.snap_shot()
+        page = BeautifulSoup(driver.page_source, "html.parser")
+        resultSet = page.find("div", {"class":"events-result-set"})
+        events = resultSet.find_all("div", {"class":"event"})
+
+        # loop through the events
+        allEvents = []
+        for event in events:
+            contents = event.find("div", {"class":"event-participants"}).contents
+            name = contents[1] + contents[3]
+            date = event.find("span", {"class":"event-time-text"}).string
+            timeStr = self.format_date(date)
+
+            print timeStr
+            print name
+
+            # loop through the option rows
+            rows = event.find_all("div", {"class":"event-row"})
+            eventOptions = []
+            for row in rows:
+                # this is the participant's name or option name in the first cell
+                part = row.find("div", {"class":"event-participant"}).contents[0]
+                # all odds for this selection
+                allOptions = row.find("div", {"class":"event-odds"}).find_all("a", {"class":"selectboxit-option-anchor"})
+
+                for option in allOptions:
+                    contents = option.contents
+                    oddsText = contents[1].split(" ")
+                    odds = float(oddsText[1])
+                    sportsEventOption = {
+                        "name": part + " " + oddsText[0],
+                        "odds": float(odds)
+                        }
+                    # log extracted content
+                    print sportsEventOption
+                    eventOptions.append(sportsEventOption)
+
+            sportsEvent = {
+                "name": name,
+                "time": timeStr,
+                "options": eventOptions
+            }
+
+            # add to our list and move on to next event
+            allEvents.append(sportsEvent)
+
+        blob = {
+           "bookname": "Nitrogen Sports",
+           "sport": self.sport,
+           "events": allEvents
+        }
+
+        response = requests.post('http://localhost:9000/events', json=blob)
+        print response.content
+
+    def tearDown(self):
+        self.driver.quit()
+
+if __name__ == "__main__":
+    unittest.main()
