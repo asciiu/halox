@@ -66,7 +66,6 @@ class Nitro(unittest.TestCase):
         WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_class_name("events-result-set"))
         time.sleep(2)
 
-        self.snap_shot()
         page = BeautifulSoup(driver.page_source, "html.parser")
         resultSet = page.find("div", {"class":"events-result-set"})
         events = resultSet.find_all("div", {"class":"event"})
