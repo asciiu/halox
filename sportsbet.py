@@ -107,11 +107,13 @@ class SportsBet(unittest.TestCase):
                         WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(datePath2))
                         continue
 
+                    # this dead sleep is needed to wait until the spreads are fully loaded
+                    time.sleep(2)
                     # extract spreads here
                     page3 = BeautifulSoup(driver.page_source, "html.parser")
 
-                    sections = ["Match Winner", "Total Spreads", "Points Spreads"]
                     eventOptions = []
+                    sections = ["Match Winner", "Total Spreads", "Points Spreads"]
                     for section in sections:
 
                         sectionHeaderDiv = page3.find(string = section)
