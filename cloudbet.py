@@ -144,18 +144,6 @@ class Cloudbet(unittest.TestCase):
             WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_class_name("sports-line-title"))
             # follow event link
 
-        #blob = {
-        #  "bookname": "Cloudbet",
-        #  "sport": self.sport,
-        #  "events": allEvents
-        #}
-#
-        ##req = urllib2.Request('http://localhost:9000/events')
-        #response = requests.post('http://localhost:9000/events', json=blob)
-#
-        ##req.add_header('Content-Type', 'application/json')
-        ##response = urllib2.urlopen(req, blob)
-        #print response.content
 
     def tearDown(self):
         self.driver.quit()
