@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
 
 
-class Nitro(unittest.TestCase):
+class Betcoin(unittest.TestCase):
     def setUp(self):
         # link to NBA basketball events
         self.sport = "NBA Basketball"
