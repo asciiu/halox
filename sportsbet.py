@@ -39,6 +39,21 @@ class SportsBet(unittest.TestCase):
             return False
         return True
 
+
+    def snap_shot(self):
+        self.driver.get_screenshot_as_file('/Users/bishop/Workspace/Python/scrapers/screenshots/test.png')
+
+
+    def post_data(self, events):
+        blob = {
+          "bookname": "SportsBet",
+          "sport": self.sport,
+          "events": events
+        }
+        response = requests.post('http://localhost:9000/events', json=blob)
+        print response.content
+
+
     def test_main(self):
         driver = self.driver
         formatter1 = '%d %b %y'
@@ -50,14 +65,16 @@ class SportsBet(unittest.TestCase):
         sportElement = driver.find_element_by_xpath(sportPath)
         sportElement.click()
 
-        dates = driver.find_element_by_class_name("date-badges-container")
         page = BeautifulSoup(driver.page_source, "html.parser")
 
         allEvents = []
+
+        # loop through each day
         dateElements = page.find_all("div", {"class": "date-badge"})
         for element in dateElements:
             date = element.get_text().split(" ", 1)[1]
 
+            # skip matches badge
             if (date == "Matches"):
                 continue
 
@@ -65,6 +82,10 @@ class SportsBet(unittest.TestCase):
             datePath = "//*[text() = '"+date+"']"
             dateObj = driver.find_element_by_xpath(datePath)
             dateObj.click()
+
+            # apparently I need this wait in here because
+            # the page javasript needs more time to load the dom events
+            time.sleep(2)
 
             formattedTime1 = datetime.strptime(date, formatter1)
             date = formattedTime1.strftime(formatter2)
@@ -74,7 +95,9 @@ class SportsBet(unittest.TestCase):
                 continue
             else:
                 page2 = BeautifulSoup(driver.page_source, "html.parser")
-                events = page2.find_all("div", {"class":"event"})
+                content = page2.find("div", {"class":"date-badges-container"}).parent
+                events = content.find_all("div", {"class":"event"})
+
                 for evt in events:
                     content = evt.getText()
                     if "Markets will be available soon" in content:
@@ -143,22 +166,15 @@ class SportsBet(unittest.TestCase):
                         "time": timeStr,
                         "options": eventOptions
                     }
-                    allEvents.append(sportsEvent)
+                    self.post_data([sportsEvent])
 
                     driver.back()
                     WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(datePath2))
 
-        blob = {
-          "bookname": "SportsBet",
-          "sport": self.sport,
-          "events": allEvents
-        }
-
-        response = requests.post('http://localhost:9000/events', json=blob)
-        print response.content
 
     def tearDown(self):
         self.driver.quit()
+
 
 if __name__ == "__main__":
     unittest.main()
