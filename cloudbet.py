@@ -1,11 +1,7 @@
 import requests
-import re
-import mechanize
 import unittest
 import json
-import urllib2
 import time
-
 
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
@@ -27,8 +23,27 @@ class Cloudbet(unittest.TestCase):
         self.driver.get(url)
         self.driver.implicitly_wait(10)
 
+
+    def snap_shot(self):
+        self.driver.get_screenshot_as_file('/Users/bishop/Workspace/Python/scrapers/screenshots/test.png')
+
+
+    def post_data(self, events):
+        blob = {
+          "bookname": "Cloudbet",
+          "sport": self.sport,
+          "events": events
+        }
+        response = requests.post('http://localhost:9000/events', json=blob)
+        print response.content
+
+
     def test_main(self):
         driver = self.driver
+
+        WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_class_name("sports-line"))
+        time.sleep(2)
+
         soup = BeautifulSoup(driver.page_source, "html.parser")
 
         # table with class sports-line
@@ -75,14 +90,23 @@ class Cloudbet(unittest.TestCase):
             gameElement.click()
 
             # must wait until moneyline section appears
-            sectionPath = "//*[text() = 'Moneyline']"
+            sectionPath = "//*[text() = 'US Total']"
             WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(sectionPath))
             spreadsPage = BeautifulSoup(driver.page_source, "html.parser")
+
+            sectionDivs = spreadsPage.find_all("div", {"class":"market-list__item__title"})
+            sectionTitles = map(lambda div: div.get_text(), sectionDivs)
+            sectionTitles
 
             # these are the sections we extract odds from
             sections = ["Moneyline", "Points Spreads", "Total Spreads"]
             eventOptions = []
             for section in sections:
+                # skip sections not present
+                if (section not in sectionTitles):
+                    print section + " not found"
+                    continue
+
                 # skip locked sections
                 sectionDiv = spreadsPage.find(string = section).parent.parent
                 if ("locked" in sectionDiv.get("class")):
@@ -113,24 +137,25 @@ class Cloudbet(unittest.TestCase):
                 "time": timeStr,
                 "options": eventOptions
             }
-            allEvents.append(sportsEvent)
+            self.post_data([sportsEvent])
+            #allEvents.append(sportsEvent)
 
             driver.back()
             WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_class_name("sports-line-title"))
             # follow event link
 
-        blob = {
-          "bookname": "Cloudbet",
-          "sport": self.sport,
-          "events": allEvents
-        }
-
-        #req = urllib2.Request('http://localhost:9000/events')
-        response = requests.post('http://localhost:9000/events', json=blob)
-
-        #req.add_header('Content-Type', 'application/json')
-        #response = urllib2.urlopen(req, blob)
-        print response.content
+        #blob = {
+        #  "bookname": "Cloudbet",
+        #  "sport": self.sport,
+        #  "events": allEvents
+        #}
+#
+        ##req = urllib2.Request('http://localhost:9000/events')
+        #response = requests.post('http://localhost:9000/events', json=blob)
+#
+        ##req.add_header('Content-Type', 'application/json')
+        ##response = urllib2.urlopen(req, blob)
+        #print response.content
 
     def tearDown(self):
         self.driver.quit()
