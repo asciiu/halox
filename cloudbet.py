@@ -3,14 +3,16 @@ import unittest
 import json
 import time
 
+from base import Scrapper
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import TimeoutException
 
 
-class Cloudbet(unittest.TestCase):
+class Cloudbet(Scrapper):
     def setUp(self):
         # link to NFL football events
         url = 'https://www.cloudbet.com/en/sports/competition/208'
@@ -24,22 +26,9 @@ class Cloudbet(unittest.TestCase):
         self.driver.implicitly_wait(10)
 
 
-    def snap_shot(self):
-        self.driver.get_screenshot_as_file('/Users/bishop/Workspace/Python/scrapers/screenshots/test.png')
-
-
-    def post_data(self, events):
-        blob = {
-          "bookname": "Cloudbet",
-          "sport": self.sport,
-          "events": events
-        }
-        response = requests.post('http://localhost:9000/events', json=blob)
-        print response.content
-
-
     def test_main(self):
         driver = self.driver
+        self.bookname = "Cloudbet"
 
         WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_class_name("sports-line"))
         time.sleep(2)
@@ -90,8 +79,13 @@ class Cloudbet(unittest.TestCase):
             gameElement.click()
 
             # must wait until moneyline section appears
-            sectionPath = "//*[text() = 'US Total']"
-            WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(sectionPath))
+            sectionPath1 = "//*[text() = 'US Total']"
+            sectionPath2 = "//*[text() = 'Moneyline']"
+            try:
+                WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_xpath(sectionPath1 or sectionPath2))
+            except TimeoutException:
+                self.snap_shot
+
             spreadsPage = BeautifulSoup(driver.page_source, "html.parser")
 
             sectionDivs = spreadsPage.find_all("div", {"class":"market-list__item__title"})
@@ -137,12 +131,12 @@ class Cloudbet(unittest.TestCase):
                 "time": timeStr,
                 "options": eventOptions
             }
-            self.post_data([sportsEvent])
-            #allEvents.append(sportsEvent)
+            if eventOptions:
+                self.post_data(self.bookname, self.sport, [sportsEvent])
 
+            # previous page
             driver.back()
             WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_class_name("sports-line-title"))
-            # follow event link
 
 
     def tearDown(self):

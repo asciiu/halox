@@ -43,7 +43,7 @@ class Scrapper(unittest.TestCase):
         ]
         self.driver = webdriver.PhantomJS(service_args = service_args)
         self.driver.implicitly_wait(10)
-        print "setup1"
+        self.driver.set_window_size(1120, 550)
 
 
     def post_data(self, book, sport, events):
