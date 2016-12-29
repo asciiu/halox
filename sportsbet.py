@@ -1,11 +1,8 @@
-import requests
-import re
-import mechanize
-import unittest
 import json
-import urllib2
 import time
+import unittest
 
+from base import Scrapper
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from selenium import webdriver
@@ -13,9 +10,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
 
 
-class SportsBet(unittest.TestCase):
+class SportsBet(Scrapper):
+    # Can't use tor atm because of the captcha
     def setUp(self):
         # link to NBA basketball events
+        self.bookname = "SportsBet"
         self.sport = "NBA Basketball"
         self.sport = "Basketball NBA"
         url = 'https://sportsbet.io/sports'
@@ -24,34 +23,6 @@ class SportsBet(unittest.TestCase):
         self.driver.set_window_size(1120, 550)
         self.driver.implicitly_wait(10)
         self.driver.get(url)
-
-    def check_exists_by_class(self, classname):
-        try:
-            self.driver.find_element_by_class_name(classname)
-        except NoSuchElementException:
-            return False
-        return True
-
-    def check_exists_by_xpath(self, path):
-        try:
-            self.driver.find_element_by_xpath(path)
-        except NoSuchElementException:
-            return False
-        return True
-
-
-    def snap_shot(self):
-        self.driver.get_screenshot_as_file('/Users/bishop/Workspace/Python/scrapers/screenshots/test.png')
-
-
-    def post_data(self, events):
-        blob = {
-          "bookname": "SportsBet",
-          "sport": self.sport,
-          "events": events
-        }
-        response = requests.post('http://localhost:9000/events', json=blob)
-        print response.content
 
 
     def test_main(self):
@@ -166,14 +137,10 @@ class SportsBet(unittest.TestCase):
                         "time": timeStr,
                         "options": eventOptions
                     }
-                    self.post_data([sportsEvent])
+                    self.post_data(self.bookname, self.sport, [sportsEvent])
 
                     driver.back()
                     WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_xpath(datePath2))
-
-
-    def tearDown(self):
-        self.driver.quit()
 
 
 if __name__ == "__main__":
