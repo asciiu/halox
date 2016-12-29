@@ -2,6 +2,7 @@ import requests
 import unittest
 import time
 
+from base import Scrapper
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from selenium import webdriver
@@ -9,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
 
 
-class Betcoin(unittest.TestCase):
+class Betcoin(Scrapper):
     def setUp(self):
         # link to NBA basketball events
         self.sport = "NBA Basketball"
@@ -19,23 +20,6 @@ class Betcoin(unittest.TestCase):
         self.driver.set_window_size(2560, 1600)
         self.driver.implicitly_wait(10)
         self.driver.get(url)
-
-    def check_exists_by_class(self, classname):
-        try:
-            self.driver.find_element_by_class_name(classname)
-        except NoSuchElementException:
-            return False
-        return True
-
-    def check_exists_by_xpath(self, path):
-        try:
-            self.driver.find_element_by_xpath(path)
-        except NoSuchElementException:
-            return False
-        return True
-
-    def snap_shot(self):
-        self.driver.get_screenshot_as_file('/Users/bishop/Workspace/Python/scrapers/screenshots/test.png')
 
     def format_date(self, txt):
         timeText = txt.strip()
@@ -64,7 +48,6 @@ class Betcoin(unittest.TestCase):
         sportContent = eventsPage.find(string = sport).parent.parent.next_sibling.next_sibling
         events = sportContent.find_all(title = "Basketball / NBA / NBA")
 
-        allEvents = []
         for event in events:
             href = event.get("href")
             time = event.b.string
@@ -113,22 +96,13 @@ class Betcoin(unittest.TestCase):
                 "time": timeStr,
                 "options": eventOptions
             }
-            allEvents.append(sportsEvent)
+            
+            if eventOptions:
+                self.post_data("Betcoin", self.sport, [sportsEvent])
 
             driver.back()
             WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_xpath(sportPath))
 
-        blob = {
-           "bookname": "Betcoin",
-           "sport": self.sport,
-           "events": allEvents
-        }
-
-        response = requests.post('http://localhost:9000/events', json=blob)
-        print response.content
-
-    def tearDown(self):
-        self.driver.quit()
 
 if __name__ == "__main__":
     unittest.main()

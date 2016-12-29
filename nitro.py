@@ -2,6 +2,7 @@ import requests
 import unittest
 import time
 
+from base import Scrapper
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from selenium import webdriver
@@ -9,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
 
 
-class Nitro(unittest.TestCase):
+class Nitro(Scrapper):
     def setUp(self):
         # link to NBA basketball events
         self.sport = "NBA Basketball"
@@ -20,23 +21,6 @@ class Nitro(unittest.TestCase):
         self.driver.set_window_size(2560, 1600)
         self.driver.implicitly_wait(10)
         self.driver.get(url)
-
-    def check_exists_by_class(self, classname):
-        try:
-            self.driver.find_element_by_class_name(classname)
-        except NoSuchElementException:
-            return False
-        return True
-
-    def check_exists_by_xpath(self, path):
-        try:
-            self.driver.find_element_by_xpath(path)
-        except NoSuchElementException:
-            return False
-        return True
-
-    def snap_shot(self):
-        self.driver.get_screenshot_as_file('/Users/bishop/Workspace/Python/scrapers/screenshots/test.png')
 
     def format_date(self, txt):
         timeText = txt.strip()
@@ -69,7 +53,6 @@ class Nitro(unittest.TestCase):
         events = resultSet.find_all("div", {"class":"event"})
 
         # loop through the events
-        allEvents = []
         for event in events:
             contents = event.find("div", {"class":"event-participants"}).contents
             name = contents[1] + contents[3]
@@ -106,20 +89,9 @@ class Nitro(unittest.TestCase):
                 "options": eventOptions
             }
 
-            # add to our list and move on to next event
-            allEvents.append(sportsEvent)
+            if eventOptions:
+                self.post_data("Nitrogen Sports", self.sport, [sportsEvent])
 
-        blob = {
-           "bookname": "Nitrogen Sports",
-           "sport": self.sport,
-           "events": allEvents
-        }
-
-        response = requests.post('http://localhost:9000/events', json=blob)
-        print response.content
-
-    def tearDown(self):
-        self.driver.quit()
 
 if __name__ == "__main__":
     unittest.main()
