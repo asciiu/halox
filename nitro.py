@@ -8,19 +8,21 @@ from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import ElementNotVisibleException
 
 
 class Nitro(Scrapper):
     def setUp(self):
         # link to NBA basketball events
-        self.sport = "NBA Basketball"
-        url = 'https://nitrogensports.eu/sport/football/nfl'
-        url = 'https://nitrogensports.eu/sport/basketball/nba'
+        #url = 'https://nitrogensports.eu/sport/football/nfl'
+
+        #self.sport = "NCAA Basketball"
+        #url = 'https://nitrogensports.eu/sport/basketball/ncaa'
 
         self.driver = webdriver.PhantomJS()
         self.driver.set_window_size(2560, 1600)
         self.driver.implicitly_wait(10)
-        self.driver.get(url)
+        #self.driver.get(url)
 
     def format_date(self, txt):
         timeText = txt.strip()
@@ -34,19 +36,36 @@ class Nitro(Scrapper):
         timeText = timeText.replace("am", " AM")
         return timeText
 
-    def test_main(self):
+    def test_nba(self):
+        self.sport = "NBA Basketball"
+        url = 'https://nitrogensports.eu/sport/basketball/nba'
+        self.driver.get(url)
+        self.do_test()
+
+    def test_ncaa(self):
+        self.sport = "NCAA Basketball"
+        url = 'https://nitrogensports.eu/sport/basketball/ncaa'
+        self.driver.get(url)
+        self.do_test()
+
+    def do_test(self):
         driver = self.driver
 
-        # wait up to 10 seconds for signin btn to appear
-        signInBtn = WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_id("modal-welcome-new-button"))
-        # dead wait for modal to slide into view
-        time.sleep(2)
-        # create anonymous new account
-        signInBtn.click()
+        try:
+          # wait up to 20 seconds for signin btn to appear
+          signInBtn = WebDriverWait(driver, 20).until( lambda driver: driver.find_element_by_id("modal-welcome-new-button"))
 
-        # wait until event search shows up
-        WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_class_name("events-result-set"))
-        time.sleep(2)
+          # dead wait for modal to slide into view
+          time.sleep(10)
+          # create anonymous new account
+          signInBtn.click()
+
+          # wait until event search shows up
+          WebDriverWait(driver, 10).until( lambda driver: driver.find_element_by_class_name("events-result-set"))
+          time.sleep(10)
+        except Exception:
+          self.snap_shot()
+          return
 
         page = BeautifulSoup(driver.page_source, "html.parser")
         resultSet = page.find("div", {"class":"events-result-set"})
