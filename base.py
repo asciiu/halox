@@ -1,7 +1,7 @@
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
-from TorCtl import TorCtl
+#from TorCtl import TorCtl
 
 import requests
 import unittest
@@ -16,7 +16,7 @@ class Scrapper(unittest.TestCase):
 
 
     def snap_shot(self):
-        self.driver.get_screenshot_as_file('/Users/bishop/Workspace/Python/scrapers/screenshots/test.png')
+        self.driver.get_screenshot_as_file('/Users/bishop/Workspace/Python/halox/screenshots/test.png')
 
 
     def check_exists_by_class(self, classname):
