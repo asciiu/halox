@@ -15,10 +15,12 @@ from selenium.common.exceptions import TimeoutException
 class Cloudbet(Scrapper):
     def setUp(self):
         # link to NFL football events
-        url = 'https://www.cloudbet.com/en/sports/competition/208'
+        #url = 'https://www.cloudbet.com/en/sports/competition/208'
         # link to NBA basketball events
         self.sport = "NBA Basketball"
         url = 'https://www.cloudbet.com/en/sports/competition/143'
+        #self.sport = "NCAA Basketball"
+        #url = 'https://www.cloudbet.com/en/sports/competition/148'
 
         self.driver = webdriver.PhantomJS()
         self.driver.set_window_size(1120, 550)
@@ -116,7 +118,13 @@ class Cloudbet(Scrapper):
                 options = pointSpreads.find_all("div", {"class":"name"})
 
                 for option in options:
-                    optionName = option.string + " ML" if (section == "Moneyline") else option.string
+                    optionName = option.string
+                    if (optionName == None):
+                      optionName = option.contents[1].string + " " + option.contents[6].string
+
+                    if (section == "Moneyline"):
+                      optionName = optionName + " ML"
+
                     odds = option.next_sibling.get_text()
                     sportsEventOption = {
                         "name": optionName,
